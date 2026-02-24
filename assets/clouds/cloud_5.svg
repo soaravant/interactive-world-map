@@ -1,0 +1,11 @@
+<svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+  <filter id="blur">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="2" />
+  </filter>
+  <g fill="#fff" opacity="0.7" filter="url(#blur)">
+    <circle cx="40" cy="60" r="20" />
+    <circle cx="70" cy="50" r="25" />
+    <circle cx="100" cy="60" r="22" />
+    <circle cx="130" cy="55" r="18" />
+  </g>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="256">
+<filter id="cloudFilter">
+    <!-- Lower frequency = Larger, fluffier clouds -->
+    <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="5" stitchTiles="stitch" result="noise" />
+    
+    <!-- Increased density: Offset -0.1 instead of -0.4 makes them much thicker -->
+    <feColorMatrix type="matrix" values="1 0 0 0 1
+                                         1 0 0 0 1
+                                         1 0 0 0 1
+                                         0 0 0 1 -0.1" in="noise" result="coloredNoise" />
+</filter>
+<rect width="100%" height="100%" filter="url(#cloudFilter)" opacity="0.9"/>
+</svg>
