@@ -1,236 +1,171 @@
 // Config
 const CONFIG = {
     colorUrl: 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
-    cloudsUrl: 'https://unpkg.com/three-globe/example/img/clouds.png',
+    bumpUrl: 'https://unpkg.com/three-globe/example/img/earth-topology.png',
+    bgUrl: 'https://unpkg.com/three-globe/example/img/night-sky.png',
     mapUrl: 'https://unpkg.com/world-atlas@2.0.2/countries-110m.json',
     apiBase: 'https://restcountries.com/v3.1/name'
 };
 
 const app = document.getElementById('app');
-const viewport = document.getElementById('map-viewport');
-const svgLayer = document.getElementById('svg-layer');
 const loader = document.getElementById('loader');
 const modal = document.getElementById('info-modal');
 
 // State
+let worldGlobe;
 let activeCountry = null;
-let svg, g;
 let countryDataMap = new Map(); // Cache for O(1) lookup
 
 async function init() {
     try {
-        // 1. Calculate map dimensions based on the natural 2:1 aspect ratio of the texture
-        // We want the map to cover a good portion of the screen but fit safely.
-        // Let's map 1 unit of longitude to X pixels based on window width.
+        // 1. Initialize 3D Globe with Globe.gl
+        worldGlobe = Globe()
+            (document.getElementById('globeViz'))
+            .globeImageUrl(CONFIG.colorUrl)
+            .bumpImageUrl(CONFIG.bumpUrl)
+            .backgroundImageUrl(CONFIG.bgUrl)
+            .showAtmosphere(true)
+            .atmosphereColor('#3a228a')
+            .atmosphereAltitude(0.25);
 
-        let mapWidth = window.innerWidth;
-        const aspectRatio = 2; // Equirectangular is 2:1 width:height
-        let mapHeight = mapWidth / aspectRatio;
+        // 2. Tweak Three.js materials to achieve Pixar/3D glossy aesthetic
+        const globeMaterial = worldGlobe.globeMaterial();
 
-        // If height is too tall for screen, constrain by height
-        if (mapHeight > window.innerHeight) {
-            mapHeight = window.innerHeight;
-            mapWidth = mapHeight * aspectRatio;
-        }
+        // Add shininess and distinct bump depth
+        globeMaterial.bumpScale = 15; // Increased bump for cartoonish mountains
+        new THREE.TextureLoader().load(CONFIG.colorUrl, texture => {
+            globeMaterial.map = texture;
+            globeMaterial.roughness = 0.2; // Very glossy like shiny plastic
+            globeMaterial.metalness = 0.05; // Less metallic for pure colors
+            globeMaterial.color.setScalar(1.2); // Boost saturation
+        });
 
-        // Apply dimensions
-        document.getElementById('earth-texture').style.width = `${mapWidth}px`;
-        document.getElementById('earth-texture').style.height = `${mapHeight}px`;
+        // Setup custom lighting to make the "Pixar" look pop
+        const scene = worldGlobe.scene();
 
-        svgLayer.style.width = `${mapWidth}px`;
-        svgLayer.style.height = `${mapHeight}px`;
+        // Remove the default D3/Globe.gl lights
+        scene.children = scene.children.filter(c => !(c instanceof THREE.AmbientLight || c instanceof THREE.DirectionalLight));
 
-        viewport.style.width = `${mapWidth}px`;
-        viewport.style.height = `${mapHeight}px`;
+        // Add soft ambient light
+        const ambientLight = new THREE.AmbientLight(0xdcf0ff, 0.8);
+        scene.add(ambientLight);
 
-        // 2. Setup D3 Projection (Equirectangular matches the image texture)
-        // D3's Equirectangular fits 360 degrees into width 960 by default?
-        // We need to scale it to our container.
-        const projection = d3.geoEquirectangular()
-            .translate([mapWidth / 2, mapHeight / 2])
-            .scale(mapWidth / (2 * Math.PI)); // Standard scaling for equirectangular to fill width
+        // Key light (like a bright, warm sun)
+        const dLight = new THREE.DirectionalLight(0xfff0dd, 2.5);
+        dLight.position.set(200, 100, 200);
+        scene.add(dLight);
 
-        const path = d3.geoPath().projection(projection);
+        // Fill/Rim light (vibrant blue shadow cast)
+        const dLight2 = new THREE.DirectionalLight(0x3b82f6, 1.5);
+        dLight2.position.set(-200, -100, -200);
+        scene.add(dLight2);
 
-        // 3. Setup SVG
-        svg = d3.select('#svg-layer')
-            .append('svg')
-            .attr('width', mapWidth)
-            .attr('height', mapHeight)
-            .attr('viewBox', [0, 0, mapWidth, mapHeight]);
+        // 3. Set Controls
+        worldGlobe.controls().autoRotate = true;
+        worldGlobe.controls().autoRotateSpeed = 0.5;
+        worldGlobe.controls().enableDamping = true;
 
-        g = svg.append('g');
-
-        // 4. Zoom Behavior acting on the DOM Viewport
-        // We use d3.zoom but apply the transform to the DIV, not just the SVG group.
-        // This keeps the Image and SVG in sync perfectly.
-        const zoom = d3.zoom()
-            .scaleExtent([1, 4]) // Restricted zoom as requested
-            .translateExtent([[0, 0], [mapWidth, mapHeight]])
-            .on('zoom', (event) => {
-                viewport.style.transform = `translate(-50%, -50%) translate(${event.transform.x}px, ${event.transform.y}px) scale(${event.transform.k})`;
-                // Note: We are transforming the viewport which is centered.
-                // The 'translate' from zoom needs to account for the fact we are moving internal content.
-                // Actually, applying d3 zoom output directly to a centered div can be tricky.
-                // Standard approach: Apply transform to the inner content (images + svg).
-                // Let's refactor the CSS to make 'viewport' the Scene and 'content' the target.
-            });
-
-        // REFACTORING ZOOM STRATEGY ON THE FLY:
-        // Easier: viewport is the container (full screen).
-        // Inner "Map Group" contains images and SVG.
-        // We apply event.transform to that Map Group.
-        // I will adjust the DOM in js slightly or rely on the previous CSS but careful with transform origin.
-
-        // Let's attach zoom to the #app container (listener) but transform #map-viewport.
-        // Reset transform origin to top-left to make D3 math easy.
-        viewport.style.transformOrigin = '0 0';
-        viewport.style.top = '0';
-        viewport.style.left = '0';
-        viewport.style.transform = 'none';
-
-        // Recenter initial view manually?
-        // Let's Center it.
-        const initialX = (window.innerWidth - mapWidth) / 2;
-        const initialY = (window.innerHeight - mapHeight) / 2;
-
-        const zoomBehavior = d3.zoom()
-            .scaleExtent([1, 4])
-            .on('zoom', (event) => {
-                viewport.style.transform = `translate(${event.transform.x}px, ${event.transform.y}px) scale(${event.transform.k})`;
-            });
-
-        d3.select('#app').call(zoomBehavior)
-            .call(zoomBehavior.transform, d3.zoomIdentity.translate(initialX, initialY));
-
-        document.getElementById('zoom-in').onclick = () => d3.select('#app').transition().call(zoomBehavior.scaleBy, 1.3);
-        document.getElementById('zoom-out').onclick = () => d3.select('#app').transition().call(zoomBehavior.scaleBy, 0.7);
-
-
-        // 5. Load Map Data
+        // 4. Load Map GeoJSON Data (Polygons for Country Hover)
         const worldData = await d3.json(CONFIG.mapUrl);
         const countries = topojson.feature(worldData, worldData.objects.countries).features;
 
-        // 6. Draw Countries (Invisible Interaction Layer)
-        g.selectAll('path')
-            .data(countries)
-            .enter()
-            .append('path')
-            .attr('d', path)
-            .attr('class', 'country')
-            .attr('id', d => `country-${d.id}`) // Store ID for easy lookup
-            .on('click', handleCountryClick);
-
-        // 7. Load Population Data & Create Pins
-        // 7. Load Population Data, Flags, Capital, Region for ALL countries
-        // We fetch from a local file for INSTANT access (no API delay).
+        // 5. Load external data and cache
         const popRes = await fetch('countries_data.json');
         const popData = await popRes.json();
 
-        // 7a. Build Map and Preload Images
         popData.forEach(d => {
-            // Map by common name (as fallback) and ccn3 (if available)
             if (d.name?.common) {
                 countryDataMap.set(d.name.common.toLowerCase(), d);
             }
             if (d.ccn3) {
-                countryDataMap.set(d.ccn3, d); // String match
+                countryDataMap.set(d.ccn3, d);
             }
-
-            // Preload Image
             if (d.flags?.svg) {
                 const img = new Image();
                 img.src = d.flags.svg;
             }
         });
 
-        // Sort top 20
+        // 6. Draw Interactive Country Polygons
+        worldGlobe.polygonsData(countries)
+            .polygonAltitude(0.01) // slightly raised off the map surface
+            .polygonCapColor(() => 'rgba(255, 255, 255, 0.0)') // invisible until hovered
+            .polygonSideColor(() => 'rgba(56, 189, 248, 0.2)')
+            .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.5)') // Stronger, visible borders initially
+            .onPolygonHover(hoverD => {
+                if (hoverD) document.body.style.cursor = 'pointer';
+                else document.body.style.cursor = 'grab';
+            })
+            .onPolygonClick(handleCountryClick)
+            .onGlobeClick(() => {
+                activeCountry = null;
+                updateGlobeStyles();
+                modal.classList.add('hidden');
+            });
+
+        // 7. Add Custom Markers (Top 20 populated + NYC)
         const top20 = popData
             .sort((a, b) => b.population - a.population)
             .slice(0, 20);
 
-        // Map pins to centroids
-        const pinData = top20.map(d => {
-            // Find matching TopoJSON feature. 
-            // RestCountries uses 'ccn3' which is numeric code string '004'. 
-            // TopoJSON 'id' is often numeric 4. We need to cast.
-            const feature = countries.find(f => {
-                // Handle various ID formats (string vs int)
-                return parseInt(f.id) === parseInt(d.ccn3);
-            });
+        const markersData = top20.map(d => {
+            const feature = countries.find(f => parseInt(f.id) === parseInt(d.ccn3));
+            if (!feature) return null;
 
-            if (feature) {
-                return {
-                    name: d.name.common,
-                    population: d.population,
-                    centroid: path.centroid(feature),
-                    feature: feature // Keep reference for click handling
+            const centroid = d3.geoCentroid(feature); // returns [lng, lat]
+
+            return {
+                lat: centroid[1],
+                lng: centroid[0],
+                id: d.ccn3,
+                name: d.name.common,
+                data: d,
+                color: '#4285F4'
+            };
+        }).filter(m => m !== null);
+
+        const nycMarker = {
+            lat: 40.7128, lng: -74.0060, name: 'New York City, USA',
+            data: {
+                population: 8804190,
+                region: 'North America',
+                capital: ['Albany (State Cap)'],
+                flags: { svg: 'https://flagcdn.com/w320/us.png' }
+            },
+            color: '#FF5722' // Distinct Orange
+        };
+
+        worldGlobe.htmlElementsData([...markersData, nycMarker])
+            .htmlElement(d => {
+                const el = document.createElement('div');
+                // Creating our classic pin marker!
+                el.innerHTML = `<svg viewBox="0 0 24 24" class="globe-pin" style="width: 24px; height: 24px; fill: ${d.color}; stroke: white; stroke-width: 1.5px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-50%, -100%); cursor: pointer; transform-origin: center bottom;">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"></path>
+                    </svg>`;
+                el.style.pointerEvents = 'auto';
+                el.onclick = (e) => {
+                    e.stopPropagation();
+                    const feature = countries.find(f => parseInt(f.id) === parseInt(d.id));
+                    if (feature) {
+                        handleCountryClick(feature);
+                    } else {
+                        activeCountry = null;
+                        updateGlobeStyles();
+                        showModal(d.name);
+                        updateModal(d.data);
+                    }
                 };
-            }
-            return null;
-        }).filter(p => p !== null);
-
-        // Draw Pins
-        // Draw Pins (Google Maps Style Markers)
-        // Path for a standard tear-drop pin. 24x24 viewBox, tip at (12, 22)
-        const markerPath = "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z";
-
-        g.selectAll('.pin-group')
-            .data(pinData)
-            .enter()
-            .append('g')
-            .attr('class', 'pin-group')
-            // Position the Group at the centroid
-            .attr('transform', d => `translate(${d.centroid[0]}, ${d.centroid[1]})`)
-            .on('click', (event, d) => {
-                handleCountryClick.call(document.getElementById(`country-${d.feature.id}`), event, d.feature);
+                return el;
             })
-            .append('path')
-            .attr('d', markerPath)
-            .attr('class', 'pin')
-            // Center the pin: The path is 24px wide, 24px high. Tip is at bottom center.
-            // We want (0,0) of the group to be the tip.
-            // The tip in the path is at roughly (12, 22). 
-            // So translate path by (-12, -22).
-            .attr('transform', 'translate(-12, -22) scale(1)');
+            .htmlAltitude(0.05); // Just above polygons
 
-
-        // Helper: Adjust pin size on zoom so they don't get huge?
-        // Let's add that to the zoom listener if desired, but pulse effect handles visibility well.
-
-        // 8. Add specific Marker for New York City
-        const nycCoords = [-74.0060, 40.7128]; // [Longitude, Latitude]
-        const nycPos = projection(nycCoords);
-
-        g.append('g')
-            .attr('class', 'pin-group custom-pin')
-            .attr('transform', `translate(${nycPos[0]}, ${nycPos[1]})`)
-            .style('cursor', 'pointer')
-            .on('click', function (event) {
-                event.stopPropagation();
-                // Deselect other countries
-                if (activeCountry) d3.select(activeCountry).classed('active', false);
-                activeCountry = this;
-                d3.select(this).classed('active', true);
-
-                showModal('New York City, USA');
-                updateModal({
-                    population: 8804190,
-                    region: 'North America',
-                    capital: ['Albany (State Cap)'],
-                    flags: { svg: 'https://flagcdn.com/w320/us.png' }
-                });
-            })
-            .append('path')
-            .attr('d', markerPath)
-            .attr('class', 'pin')
-            .style('fill', '#FF5722') // Distinct Orange Color
-            .attr('transform', 'translate(-12, -22) scale(1)');
+        // Enable resizing
+        window.addEventListener('resize', () => {
+            worldGlobe.width(window.innerWidth);
+            worldGlobe.height(window.innerHeight);
+        });
 
         loader.style.display = 'none';
-
-        // 8. Spawn Cloud Sprites
-        spawnClouds(40); // Spawn 40 random clouds
 
     } catch (e) {
         console.error(e);
@@ -238,72 +173,47 @@ async function init() {
     }
 }
 
-function spawnClouds(count) {
-    const container = document.getElementById('clouds-container');
-    container.innerHTML = '';
+function updateGlobeStyles() {
+    worldGlobe.polygonAltitude(d => d === activeCountry ? 0.06 : 0.01)
+        .polygonCapColor(d => d === activeCountry ? 'rgba(56, 189, 248, 0.5)' : 'rgba(255, 255, 255, 0.0)')
+        .polygonStrokeColor(d => d === activeCountry ? '#ffffff' : 'rgba(255, 255, 255, 0.5)');
 
-    for (let i = 0; i < count; i++) {
-        // Create IMG element from external assets
-        const cloud = document.createElement('img');
-        cloud.classList.add('cloud-sprite');
+    // Pins move with layer
+    worldGlobe.htmlAltitude(pinD => {
+        if (activeCountry && parseInt(activeCountry.id) === parseInt(pinD.id)) {
+            return 0.1;
+        }
+        return 0.05;
+    });
 
-        // Random asset 1-5 (PNG now)
-        const assetId = Math.floor(Math.random() * 5) + 1;
-        cloud.src = `assets/clouds/cloud${assetId}.png`;
-
-        // Random Variable --i for animation duration
-        // Range 2 (fast) to 10 (slow) -> 16s to 80s cycle
-        const speedVar = 2 + Math.random() * 8;
-        cloud.style.setProperty('--i', speedVar);
-
-        // Random Position (Top 0-90%)
-        cloud.style.top = `${Math.random() * 90}%`;
-
-        // Random Width (200px to 600px)
-        const width = 200 + Math.random() * 400;
-        cloud.style.width = `${width}px`;
-
-        // Optional: Random Opacity for extra depth
-        cloud.style.opacity = 0.4 + Math.random() * 0.5;
-
-        // Negative delay for scattered start
-        cloud.style.animationDelay = `-${Math.random() * 100}s`;
-
-        container.appendChild(cloud);
-    }
+    worldGlobe.controls().autoRotate = !activeCountry;
 }
 
-function handleCountryClick(event, d) {
-    event.stopPropagation();
-    if (activeCountry) d3.select(activeCountry).classed('active', false);
-    activeCountry = this;
-    d3.select(this).classed('active', true);
+function handleCountryClick(d) {
+    if (activeCountry === d) {
+        activeCountry = null;
+        updateGlobeStyles();
+        modal.classList.add('hidden');
+        return;
+    }
+
+    activeCountry = d;
+    updateGlobeStyles();
 
     const name = d.properties.name;
-    showModal(name);
-
-    // Look up data in our preloaded map
-    // d is the TopoJSON feature. d.id might constitute the ccn3 code or we match by name.
     let data = null;
 
-    // Try by ID (CCN3) first if it exists and looks like a code
     if (d.id && countryDataMap.has(String(d.id).padStart(3, '0'))) {
         data = countryDataMap.get(String(d.id).padStart(3, '0'));
-    }
-    // Fallback: Try by ID as direct string match (sometimes TopoJSON has '004')
-    else if (d.id && countryDataMap.has(String(d.id))) {
+    } else if (d.id && countryDataMap.has(String(d.id))) {
         data = countryDataMap.get(String(d.id));
-    }
-    // Fallback: Match by name
-    else if (name && countryDataMap.has(name.toLowerCase())) {
+    } else if (name && countryDataMap.has(name.toLowerCase())) {
         data = countryDataMap.get(name.toLowerCase());
     }
 
-    // Update Modal
+    showModal(name);
     updateModal(data);
 }
-
-// fetchData is no longer needed as we have everything in memory!
 
 function showModal(name) {
     modal.classList.remove('hidden');
@@ -329,8 +239,6 @@ function updateModal(data) {
 
 document.getElementById('close-modal').onclick = () => {
     modal.classList.add('hidden');
-    if (activeCountry) d3.select(activeCountry).classed('active', false);
-    activeCountry = null;
 };
 
 init();

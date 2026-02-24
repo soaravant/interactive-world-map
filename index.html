@@ -16,26 +16,8 @@
 <body>
 
     <div id="app">
-        <!-- The Viewport: Wraps everything that moves (zooms/pans) -->
-        <div id="map-viewport">
-
-            <!-- Layer 1: Base Texture (Earth) -->
-            <img id="earth-texture" src="https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
-                alt="Earth Texture">
-
-            <!-- Layer 2: Clouds -->
-            <!-- Layer 2: Clouds -->
-            <div id="clouds-container">
-                <div class="cloud-layer layer-1"></div>
-                <div class="cloud-layer layer-2"></div>
-                <div class="cloud-layer layer-3"></div>
-            </div>
-
-            <!-- Layer 3: Interaction (SVG) -->
-            <!-- We will append the SVG here via JS -->
-            <div id="svg-layer"></div>
-
-        </div>
+        <!-- 3D Globe Container -->
+        <div id="globeViz"></div>
 
         <!-- Layer 4: Atmosphere/Lighting (Static Overlay) -->
         <div id="atmosphere-overlay"></div>
@@ -68,18 +50,17 @@
                 </div>
             </div>
         </div>
-
-        <!-- Controls -->
-        <div class="controls glass-panel">
-            <button id="zoom-in" aria-label="Zoom In">+</button>
-            <button id="zoom-out" aria-label="Zoom Out">−</button>
-        </div>
     </div>
 
-    <!-- D3.js and TopoJSON -->
+    <!-- D3.js and TopoJSON (for polygons calculations) -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson-client@3"></script>
-    <script src="script.js"></script>
+
+    <!-- Three.js and Globe.gl -->
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/globe.gl"></script>
+
+    <script src="script.js?v=4"></script>
 </body>
 
 </html>

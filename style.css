@@ -32,125 +32,41 @@ body {
     background: #000;
 }
 
-/* 
-   We construct a "World Group" div that will be transformed by D3 Zoom.
-   It contains the Image and the SVG stacked strictly on top of each other.
-*/
-#map-viewport {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    /* Centering mechanism initially */
-    width: 0;
-    height: 0;
-    /* D3 will control visual transform on children or this container? 
-       Actually, D3 Zoom usually operates on a <g> inside SVG. 
-       Here we need to zoom DOM elements. We will apply the transform to this container. */
-    transform-origin: 0 0;
-}
-
-/* Layers inside the viewport */
-#earth-texture,
-#clouds-texture,
-#svg-layer {
+#globeViz {
     position: absolute;
     top: 0;
     left: 0;
-    /* These dimensions will be set by JS based on natural aspect ratio 2:1 */
-    pointer-events: none;
-    /* Let clicks pass through images to SVG */
-}
-
-#earth-texture {
-    /* Ensure image is visible */
-    display: block;
+    width: 100vw;
+    height: 100vh;
     z-index: 1;
+    cursor: grab;
 }
 
-#svg-layer {
-    pointer-events: auto;
-    /* Re-enable for SVG interactions */
-    z-index: 10;
+#globeViz:active {
+    cursor: grabbing;
 }
 
-/* Cloud Layers */
-/* Cloud Layers */
-/* Cloud Layers (Sprites) */
-/* Cloud Layers (External Repo Style) */
-#clouds-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 5;
-    overflow: hidden;
-    display: none;
-    /* Clouds toggled off */
+/* 3D Globe Pins */
+.globe-pin {
+    animation: bounce 2s ease-in-out infinite;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 
-   Matched to: .cloud img 
-   - animation: cld calc(8s * var(--i)) linear infinite;
-   will-change: transform;
-*/
-.cloud-sprite {
-    position: absolute;
-    opacity: 0.8;
-    animation: cld calc(8s * var(--i)) linear infinite;
-    will-change: transform;
-}
-
-@keyframes cld {
-    0% {
-        transform: translateX(-100%);
-    }
-
-    100% {
-        transform: translateX(100vw);
-        /* Cross entire screen */
-    }
-}
-
-
-
-
-/* Pins - Google Maps Style */
-.pin {
-    fill: #4285F4;
-    /* Google Blue */
-    stroke: white;
-    stroke-width: 1.5px;
-    cursor: pointer;
-    /* Drop shadow for depth */
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-
-    /* Animation origin is now handled by the parent group or local transform */
-    transform-origin: 12px 22px;
-    /* Bottom tip of the path coordinate system */
-    animation: float 2s ease-in-out infinite;
-}
-
-.pin:hover {
-    fill: #1a73e8;
-    /* Darker Blue */
-    stroke-width: 2px;
-    transform: translate(-12px, -22px) scale(1.2);
-    /* Slight scale up on hover */
+.globe-pin:hover {
+    transform: translate(-50%, -100%) scale(1.2) !important;
     animation-play-state: paused;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8)) !important;
 }
 
-@keyframes float {
+@keyframes bounce {
 
     0%,
     100% {
-        transform: translate(-12px, -22px) translateY(0);
+        transform: translate(-50%, -100%) translateY(0);
     }
 
     50% {
-        transform: translate(-12px, -22px) translateY(-8px);
+        transform: translate(-50%, -100%) translateY(-6px);
     }
 }
 
@@ -164,36 +80,7 @@ body {
     z-index: 20;
 }
 
-/* SVG Styles */
-svg {
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-}
-
-.country {
-    fill: transparent;
-    /* Invisible by default, showing texture behind */
-    stroke: rgba(255, 255, 255, 0.4);
-    /* Increased opacity from 0.1 to 0.4 */
-    stroke-width: 0.5px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.country:hover {
-    fill: rgba(255, 255, 255, 0.1);
-    /* Slight white highlight */
-    stroke: rgba(255, 255, 255, 0.8);
-    /* Brighter on hover */
-}
-
-.country.active {
-    fill: rgba(37, 99, 235, 0.3);
-    /* Blue tint on active */
-    stroke: #60a5fa;
-    stroke-width: 1px;
-}
+/* SVG Styles removed, replaced by WebGL via Three.js */
 
 /* UI Elements */
 
@@ -232,17 +119,7 @@ svg {
     }
 }
 
-/* Controls */
-.controls {
-    position: absolute;
-    bottom: 2rem;
-    right: 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    z-index: 50;
-    padding: 0.5rem;
-}
+/* Controls - removed */
 
 button {
     background: transparent;
