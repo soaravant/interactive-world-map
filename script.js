@@ -232,7 +232,8 @@ async function init() {
             .polygonsTransitionDuration(250) // Make interactions snappy when extruding
             .polygonCapColor(() => 'rgba(255, 255, 255, 0.0)') // invisible until hovered
             .polygonSideColor(() => 'rgba(56, 189, 248, 0.6)') // increased extrusion opacity
-            .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.3)') // Fainter stroke that traces bumpy terrain
+            // Thickest visual opacity possible (WebView locks physical line width to 1px)
+            .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.6)') // Twice as bold unselected
             .onPolygonHover(hoverD => {
                 if (hoverD) document.body.style.cursor = 'pointer';
                 else document.body.style.cursor = 'grab';
@@ -330,7 +331,7 @@ async function init() {
 function updateGlobeStyles() {
     worldGlobe.polygonAltitude(d => d === activeCountry ? 0.05 : 0.001) // Safely above the 4.0 maximum displacement scale when active
         .polygonCapColor(d => d === activeCountry ? 'rgba(56, 189, 248, 0.4)' : 'rgba(255, 255, 255, 0.0)')
-        .polygonStrokeColor(d => d === activeCountry ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.3)'); // Outline follows bumpy terrain thinly when unselected, brightly when selected
+        .polygonStrokeColor(d => d === activeCountry ? 'rgba(255, 255, 255, 1.0)' : 'rgba(255, 255, 255, 0.6)'); // Outline follows bumpy terrain thinly when unselected, brightly when selected
 
     // Pins move with layer exactly on the same height
     worldGlobe.htmlAltitude(pinD => {
