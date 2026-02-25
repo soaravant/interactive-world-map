@@ -302,7 +302,7 @@ async function init() {
                         activeCountry = feature || { id: d.id, properties: { name: d.name } };
                         updateGlobeStyles();
                         // Push the focus up 15 degrees so the country falls beautifully to the bottom half of the screen
-                        const offsetLat = Math.min(90, d.lat + 25);
+                        const offsetLat = Math.min(90, d.lat + 20);
                         worldGlobe.pointOfView({ lat: offsetLat, lng: d.lng, altitude: 1.5 }, 1000);
                         showModal(d.name);
                         updateModal(d.data);
