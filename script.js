@@ -302,7 +302,7 @@ async function init() {
                         activeCountry = feature || { id: d.id, properties: { name: d.name } };
                         updateGlobeStyles();
                         // Push the focus up 15 degrees so the country falls beautifully to the bottom half of the screen
-                        const offsetLat = Math.min(90, d.lat + 15);
+                        const offsetLat = Math.min(90, d.lat + 25);
                         worldGlobe.pointOfView({ lat: offsetLat, lng: d.lng, altitude: 1.5 }, 1000);
                         showModal(d.name);
                         updateModal(d.data);
@@ -365,7 +365,7 @@ function handleCountryClick(d) {
 
     const centroid = d3.geoCentroid(d);
     // Shift camera slightly north to frame the country below the UI Modal
-    const offsetLat = Math.min(90, centroid[1] + 15);
+    const offsetLat = Math.min(90, centroid[1] + 25);
     worldGlobe.pointOfView({ lat: offsetLat, lng: centroid[0], altitude: 1.5 }, 1000);
 
     const name = d.properties.name;
