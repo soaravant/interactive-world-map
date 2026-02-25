@@ -23,17 +23,33 @@
     /* Hide scrollbar for a cleaner look */
 }
 
-.slideshow img {
+.slide-item {
     flex: 0 0 100%;
     width: 100%;
-    height: 140px;
-    object-fit: cover;
     scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+}
+
+.slideshow img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    display: block;
+}
+
+.slide-title {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    text-align: center;
+    color: #f8fafc;
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .slideshow-controls {
     position: absolute;
-    bottom: 0;
+    top: 180px;
+    transform: translateY(-100%);
     left: 0;
     width: 100%;
     display: flex;

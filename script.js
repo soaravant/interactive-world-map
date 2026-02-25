@@ -411,10 +411,11 @@ function updateModal(data) {
 
     // We'll generate 3 random unsplash placeholder images related to the country or region
     // (Note: source.unsplash.com was deprecated, so we use lorempicsum for reliable fast placeholders)
+    const countryName = data.name?.common || 'Country';
     const images = [
-        `https://picsum.photos/400/200?random=${Math.random()}`,
-        `https://picsum.photos/400/200?random=${Math.random()}`,
-        `https://picsum.photos/400/200?random=${Math.random()}`
+        { url: `https://picsum.photos/400/200?random=${Math.random()}`, title: `${countryName} Landscape` },
+        { url: `https://picsum.photos/400/200?random=${Math.random()}`, title: `${countryName} City View` },
+        { url: `https://picsum.photos/400/200?random=${Math.random()}`, title: `${countryName} Heritage` }
     ];
     let currentSlide = 0;
 
@@ -425,11 +426,21 @@ function updateModal(data) {
     trackEl.innerHTML = '';
     dotsContainer.innerHTML = '';
 
-    images.forEach((imgSrc, i) => {
+    images.forEach((imgObj, i) => {
         // Build image slide
+        const slideItem = document.createElement('div');
+        slideItem.className = 'slide-item';
+
         const img = document.createElement('img');
-        img.src = imgSrc;
-        trackEl.appendChild(img);
+        img.src = imgObj.url;
+
+        const title = document.createElement('div');
+        title.className = 'slide-title';
+        title.textContent = imgObj.title;
+
+        slideItem.appendChild(img);
+        slideItem.appendChild(title);
+        trackEl.appendChild(slideItem);
 
         // Build dot
         const dot = document.createElement('div');
