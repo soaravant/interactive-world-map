@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="slideshow.css">
 </head>
 
 <body>
@@ -46,6 +47,18 @@
                     <div class="stat-item">
                         <span class="label">Capital</span>
                         <span class="value" id="country-capital">...</span>
+                    </div>
+                </div>
+
+                <!-- Slideshow -->
+                <div id="country-slideshow" class="slideshow" style="display: none;">
+                    <div class="slideshow-track" id="slideshow-track">
+                        <!-- images injected here -->
+                    </div>
+                    <div class="slideshow-controls">
+                        <button id="slide-prev" class="slide-btn">&lsaquo;</button>
+                        <div class="slide-dots" id="slide-dots"></div>
+                        <button id="slide-next" class="slide-btn">&rsaquo;</button>
                     </div>
                 </div>
             </div>
