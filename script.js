@@ -240,9 +240,7 @@ async function init() {
             })
             .onPolygonClick(handleCountryClick)
             .onGlobeClick(() => {
-                activeCountry = null;
-                updateGlobeStyles();
-                modal.classList.add('hidden');
+                deselectCountry();
             });
 
         // 7. Add Custom Markers (Top 20 populated + NYC)
@@ -298,14 +296,14 @@ async function init() {
 
                     // Toggle logic
                     if (activeCountry && (activeCountry === feature || activeCountry.id === d.id)) {
-                        activeCountry = null;
-                        updateGlobeStyles();
-                        modal.classList.add('hidden');
+                        deselectCountry();
                     } else {
                         // Activate the actual polygon feature so it extrudes properly
                         activeCountry = feature || { id: d.id, properties: { name: d.name } };
                         updateGlobeStyles();
-                        worldGlobe.pointOfView({ lat: d.lat, lng: d.lng, altitude: 1.5 }, 1000);
+                        // Push the focus up 15 degrees so the country falls beautifully to the bottom half of the screen
+                        const offsetLat = Math.min(90, d.lat + 15);
+                        worldGlobe.pointOfView({ lat: offsetLat, lng: d.lng, altitude: 1.5 }, 1000);
                         showModal(d.name);
                         updateModal(d.data);
                     }
@@ -358,9 +356,7 @@ function updateGlobeStyles() {
 
 function handleCountryClick(d) {
     if (activeCountry === d) {
-        activeCountry = null;
-        updateGlobeStyles();
-        modal.classList.add('hidden');
+        deselectCountry();
         return;
     }
 
@@ -368,7 +364,9 @@ function handleCountryClick(d) {
     updateGlobeStyles();
 
     const centroid = d3.geoCentroid(d);
-    worldGlobe.pointOfView({ lat: centroid[1], lng: centroid[0], altitude: 1.5 }, 1000);
+    // Shift camera slightly north to frame the country below the UI Modal
+    const offsetLat = Math.min(90, centroid[1] + 15);
+    worldGlobe.pointOfView({ lat: offsetLat, lng: centroid[0], altitude: 1.5 }, 1000);
 
     const name = d.properties.name;
     let data = null;
@@ -478,11 +476,15 @@ function updateModal(data) {
     trackEl.scrollTo({ left: 0, behavior: 'auto' });
 }
 
-document.getElementById('close-modal').onclick = () => {
+function deselectCountry() {
     activeCountry = null;
     updateGlobeStyles();
     modal.classList.add('hidden');
-};
+    // Zoom back out to default orbit altitude (approx 2.5 depending on initial)
+    worldGlobe.pointOfView({ altitude: 2.5 }, 1000);
+}
+
+document.getElementById('close-modal').onclick = deselectCountry;
 
 // Prevent clicks and drags inside the modal from bubbling up to the globe and closing it
 ['pointerdown', 'pointerup', 'pointermove', 'click', 'wheel', 'touchstart', 'touchend', 'touchmove'].forEach(evt => {
