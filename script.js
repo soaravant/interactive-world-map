@@ -15,7 +15,8 @@ const modal = document.getElementById('info-modal');
 // State
 let worldGlobe;
 let activeCountry = null;
-let activeMission = null; // The MISSION_COUNTRIES entry for the active pin
+let activeMission = null;
+let countries = []; // Map polygons data scope
 
 async function init() {
     try {
@@ -206,7 +207,7 @@ async function init() {
 
         // 4. Load Map GeoJSON Data (Polygons for Country Hover)
         const worldData = await d3.json(CONFIG.mapUrl);
-        const countries = topojson.feature(worldData, worldData.objects.countries).features;
+        countries = topojson.feature(worldData, worldData.objects.countries).features;
 
         // 5. Draw Interactive Country Polygons
         worldGlobe.polygonsData(countries)
@@ -214,8 +215,11 @@ async function init() {
             .polygonsTransitionDuration(250) // Make interactions snappy when extruding
             .polygonCapColor(() => 'rgba(255, 255, 255, 0.0)') // invisible until hovered
             .polygonSideColor(() => 'rgba(56, 189, 248, 0.6)') // increased extrusion opacity
-            // Thickest visual opacity possible (WebView locks physical line width to 1px)
-            .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.6)') // Twice as bold unselected
+            // Borders only on mission countries
+            .polygonStrokeColor(d => {
+                const mission = findMissionByPolygonName(d.properties.name);
+                return mission ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.0)';
+            })
             .onPolygonHover(hoverD => {
                 // Only show pointer for mission countries
                 if (hoverD) {
@@ -263,7 +267,11 @@ async function init() {
                         deselectCountry();
                     } else {
                         activeMission = d.missionData;
-                        activeCountry = { id: d.id, properties: { name: d.name } };
+
+                        // Find the corresponding polygon to extrude it
+                        const countryPolygon = countries.find(c => findMissionByPolygonName(c.properties.name)?.name === d.missionData.name);
+                        activeCountry = countryPolygon || { id: d.id, properties: { name: d.name } };
+
                         updateGlobeStyles();
                         // Push the focus up 15 degrees so the country falls beautifully to the bottom half of the screen
                         const offsetLat = Math.min(90, d.lat + 20);
@@ -290,9 +298,13 @@ async function init() {
 }
 
 function updateGlobeStyles() {
-    worldGlobe.polygonAltitude(d => d === activeCountry ? 0.05 : 0.001) // Safely above the 4.0 maximum displacement scale when active
+    worldGlobe.polygonAltitude(d => d === activeCountry ? 0.05 : 0.001)
         .polygonCapColor(d => d === activeCountry ? 'rgba(56, 189, 248, 0.4)' : 'rgba(255, 255, 255, 0.0)')
-        .polygonStrokeColor(d => d === activeCountry ? 'rgba(255, 255, 255, 1.0)' : 'rgba(255, 255, 255, 0.6)'); // Outline follows bumpy terrain thinly when unselected, brightly when selected
+        .polygonStrokeColor(d => {
+            if (d === activeCountry) return 'rgba(255, 255, 255, 1.0)';
+            const mission = findMissionByPolygonName(d.properties.name);
+            return mission ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.0)';
+        });
 
     // Pins move with layer exactly on the same height
     worldGlobe.htmlAltitude(pinD => {
