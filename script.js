@@ -235,7 +235,20 @@ async function init() {
                 deselectCountry();
             });
 
-        // 6. Add Mission Country Markers from MISSION_COUNTRIES data
+        // 6. Center mission markers in the middle of their polygons
+        MISSION_COUNTRIES.forEach(m => {
+            const poly = countries.find(c => findMissionByPolygonName(c.properties.name)?.name === m.name);
+            if (poly) {
+                const centroid = d3.geoCentroid(poly);
+                // Special case: don't move Alaska pin to the center of USA (lower 48)
+                if (m.name !== 'Αλάσκα') {
+                    m.lng = centroid[0];
+                    m.lat = centroid[1];
+                }
+            }
+        });
+
+        // 7. Add Mission Country Markers from MISSION_COUNTRIES data
         const markersData = MISSION_COUNTRIES.map((m, idx) => ({
             lat: m.lat,
             lng: m.lng,
