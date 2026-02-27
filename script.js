@@ -250,7 +250,7 @@ async function init() {
                 const el = document.createElement('div');
                 // Creating a pin with the church image
                 el.innerHTML = `<svg viewBox="0 0 24 24" class="globe-pin" style="width: 32px; height: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-50%, -100%); cursor: pointer; transform-origin: center bottom;">
-                        <path class="pin-bg" data-id="${d.id}" data-default-color="${d.color}" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${d.color}" stroke="white" stroke-width="1" />
+                        <path class="pin-bg" data-mission-name="${d.missionData.name}" data-id="${d.id}" data-default-color="${d.color}" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${d.color}" stroke="white" stroke-width="1" />
                         <circle cx="12" cy="9" r="5" fill="white" />
                         <image href="church.png" x="8" y="5" width="8" height="8" />
                     </svg>`;
@@ -314,13 +314,13 @@ function updateGlobeStyles() {
         return 0.001; // Same as default polygon altitude
     });
 
-    // Update marker colors
+    // Update marker colors based on active mission
     document.querySelectorAll('.pin-bg').forEach(path => {
-        const pinId = path.dataset.id;
+        const missionName = path.dataset.missionName;
         const defaultColor = path.dataset.defaultColor;
 
-        if (activeCountry && String(activeCountry.id) === String(pinId)) {
-            path.setAttribute('fill', '#FF5722'); // Orange when clicked
+        if (activeMission && activeMission.name === missionName) {
+            path.setAttribute('fill', '#FF5722'); // Orange when active
         } else {
             path.setAttribute('fill', defaultColor);
         }
