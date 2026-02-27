@@ -182,15 +182,16 @@ button:hover {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    justify-content: space-between !important;
+    justify-content: flex-start !important;
     flex-wrap: nowrap !important;
-    gap: 1rem !important;
+    gap: 20px !important;
     width: 100% !important;
 }
 
 #country-name {
-    flex: 1;
+    flex: 0 1 auto;
     margin: 0;
+    white-space: nowrap;
 }
 
 #country-flag {
