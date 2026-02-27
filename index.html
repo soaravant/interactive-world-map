@@ -33,21 +33,12 @@
         <div id="info-modal" class="glass-panel hidden">
             <button id="close-modal">&times;</button>
             <div class="modal-content">
-                <div id="country-flag" class="flag-placeholder"></div>
-                <h2 id="country-name">Country Name</h2>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="label">Population</span>
-                        <span class="value" id="country-pop">...</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="label">Region</span>
-                        <span class="value" id="country-region">...</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="label">Capital</span>
-                        <span class="value" id="country-capital">...</span>
-                    </div>
+                <div class="country-header">
+                    <div id="country-flag" class="flag-placeholder"></div>
+                    <h2 id="country-name">Country Name</h2>
+                </div>
+                <div id="stats-grid" class="stats-grid">
+                    <!-- Stats injected dynamically by script.js -->
                 </div>
 
                 <!-- Slideshow -->
@@ -73,7 +64,8 @@
     <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
     <script src="https://unpkg.com/globe.gl"></script>
 
-    <script src="script.js?v=4"></script>
+    <script src="mission_data.js"></script>
+    <script src="script.js?v=6"></script>
 </body>
 
 </html>

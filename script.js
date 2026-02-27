@@ -5,8 +5,7 @@ const CONFIG = {
     waterUrl: 'https://unpkg.com/three-globe/example/img/earth-water.png',
     cloudsUrl: 'https://raw.githubusercontent.com/vasturiano/globe.gl/master/example/clouds/clouds.png',
     bgUrl: 'https://unpkg.com/three-globe/example/img/night-sky.png',
-    mapUrl: 'https://unpkg.com/world-atlas@2.0.2/countries-110m.json',
-    apiBase: 'https://restcountries.com/v3.1/name'
+    mapUrl: 'https://unpkg.com/world-atlas@2.0.2/countries-110m.json'
 };
 
 const app = document.getElementById('app');
@@ -16,7 +15,7 @@ const modal = document.getElementById('info-modal');
 // State
 let worldGlobe;
 let activeCountry = null;
-let countryDataMap = new Map(); // Cache for O(1) lookup
+let activeMission = null; // The MISSION_COUNTRIES entry for the active pin
 
 async function init() {
     try {
@@ -209,24 +208,7 @@ async function init() {
         const worldData = await d3.json(CONFIG.mapUrl);
         const countries = topojson.feature(worldData, worldData.objects.countries).features;
 
-        // 5. Load external data and cache
-        const popRes = await fetch('countries_data.json');
-        const popData = await popRes.json();
-
-        popData.forEach(d => {
-            if (d.name?.common) {
-                countryDataMap.set(d.name.common.toLowerCase(), d);
-            }
-            if (d.ccn3) {
-                countryDataMap.set(d.ccn3, d);
-            }
-            if (d.flags?.svg) {
-                const img = new Image();
-                img.src = d.flags.svg;
-            }
-        });
-
-        // 6. Draw Interactive Country Polygons
+        // 5. Draw Interactive Country Polygons
         worldGlobe.polygonsData(countries)
             .polygonAltitude(0.001) // closer to the surface by default
             .polygonsTransitionDuration(250) // Make interactions snappy when extruding
@@ -235,48 +217,31 @@ async function init() {
             // Thickest visual opacity possible (WebView locks physical line width to 1px)
             .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.6)') // Twice as bold unselected
             .onPolygonHover(hoverD => {
-                if (hoverD) document.body.style.cursor = 'pointer';
-                else document.body.style.cursor = 'grab';
+                // Only show pointer for mission countries
+                if (hoverD) {
+                    const name = hoverD.properties?.name;
+                    const mission = findMissionByPolygonName(name);
+                    document.body.style.cursor = mission ? 'pointer' : 'grab';
+                } else {
+                    document.body.style.cursor = 'grab';
+                }
             })
             .onPolygonClick(handleCountryClick)
             .onGlobeClick(() => {
                 deselectCountry();
             });
 
-        // 7. Add Custom Markers (Top 20 populated + NYC)
-        const top20 = popData
-            .sort((a, b) => b.population - a.population)
-            .slice(0, 20);
+        // 6. Add Mission Country Markers from MISSION_COUNTRIES data
+        const markersData = MISSION_COUNTRIES.map((m, idx) => ({
+            lat: m.lat,
+            lng: m.lng,
+            id: `mission_${idx}`,
+            name: m.name,
+            missionData: m,
+            color: '#4285F4'
+        }));
 
-        const markersData = top20.map(d => {
-            const feature = countries.find(f => parseInt(f.id) === parseInt(d.ccn3));
-            if (!feature) return null;
-
-            const centroid = d3.geoCentroid(feature); // returns [lng, lat]
-
-            return {
-                lat: centroid[1],
-                lng: centroid[0],
-                id: d.ccn3,
-                name: d.name.common,
-                data: d,
-                color: '#4285F4'
-            };
-        }).filter(m => m !== null);
-
-        const nycMarker = {
-            id: 'nyc',
-            lat: 40.7128, lng: -74.0060, name: 'New York City, USA',
-            data: {
-                population: 8804190,
-                region: 'North America',
-                capital: ['Albany (State Cap)'],
-                flags: { svg: 'https://flagcdn.com/w320/us.png' }
-            },
-            color: '#4285F4' // Blue like the rest
-        };
-
-        worldGlobe.htmlElementsData([...markersData, nycMarker])
+        worldGlobe.htmlElementsData(markersData)
             .htmlElement(d => {
                 const el = document.createElement('div');
                 // Creating a pin with the church image
@@ -292,20 +257,18 @@ async function init() {
                 el.onpointerdown = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const feature = countries.find(f => parseInt(f.id) === parseInt(d.id));
 
                     // Toggle logic
-                    if (activeCountry && (activeCountry === feature || activeCountry.id === d.id)) {
+                    if (activeMission && activeMission.name === d.missionData.name) {
                         deselectCountry();
                     } else {
-                        // Activate the actual polygon feature so it extrudes properly
-                        activeCountry = feature || { id: d.id, properties: { name: d.name } };
+                        activeMission = d.missionData;
+                        activeCountry = { id: d.id, properties: { name: d.name } };
                         updateGlobeStyles();
                         // Push the focus up 15 degrees so the country falls beautifully to the bottom half of the screen
                         const offsetLat = Math.min(90, d.lat + 20);
                         worldGlobe.pointOfView({ lat: offsetLat, lng: d.lng, altitude: 1.5 }, 1000);
-                        showModal(d.name);
-                        updateModal(d.data);
+                        showModal(d.missionData);
                     }
                 };
                 return el;
@@ -344,7 +307,7 @@ function updateGlobeStyles() {
         const pinId = path.dataset.id;
         const defaultColor = path.dataset.defaultColor;
 
-        if (activeCountry && (String(activeCountry.id) === String(pinId) || parseInt(activeCountry.id) === parseInt(pinId))) {
+        if (activeCountry && String(activeCountry.id) === String(pinId)) {
             path.setAttribute('fill', '#FF5722'); // Orange when clicked
         } else {
             path.setAttribute('fill', defaultColor);
@@ -360,64 +323,95 @@ function handleCountryClick(d) {
         return;
     }
 
+    // Only allow clicks on mission countries
+    const name = d.properties.name;
+    const mission = findMissionByPolygonName(name);
+    if (!mission) return; // Ignore non-mission country clicks
+
     activeCountry = d;
+    activeMission = mission;
     updateGlobeStyles();
 
     const centroid = d3.geoCentroid(d);
-    // Shift camera slightly north to frame the country below the UI Modal
     const offsetLat = Math.min(90, centroid[1] + 25);
     worldGlobe.pointOfView({ lat: offsetLat, lng: centroid[0], altitude: 1.5 }, 1000);
 
-    const name = d.properties.name;
-    let data = null;
+    showModal(mission);
+}
 
-    if (d.id && countryDataMap.has(String(d.id).padStart(3, '0'))) {
-        data = countryDataMap.get(String(d.id).padStart(3, '0'));
-    } else if (d.id && countryDataMap.has(String(d.id))) {
-        data = countryDataMap.get(String(d.id));
-    } else if (name && countryDataMap.has(name.toLowerCase())) {
-        data = countryDataMap.get(name.toLowerCase());
+function findMissionByPolygonName(polyName) {
+    // Map polygon English names to Greek mission names
+    const nameMap = {
+        'Mexico': 'Μεξικό',
+        'Taiwan': 'Ταϊβάν',
+        'Sierra Leone': 'Σιέρα Λεόνε',
+        'Guatemala': 'Γουατεμάλα',
+        'Cameroon': 'Καμερούν',
+        'Dem. Rep. Congo': 'Ζαΐρ',
+        'Congo': 'Κονγκό',
+        'Uganda': 'Ουγκάντα',
+        'Tanzania': 'Τανζανία',
+        'Kenya': 'Κένυα',
+        'Madagascar': 'Μαδαγασκάρη',
+        'India': 'Ινδία',
+        'Indonesia': 'Ινδονησία',
+        'South Korea': 'Νότια Κορέα',
+        'Albania': 'Αλβανία',
+        'Japan': 'Ιαπωνία',
+        'Zimbabwe': 'Ζιμπάμπουε',
+        'Colombia': 'Κολομβία',
+        'Cuba': 'Κούβα',
+        'Nigeria': 'Νιγηρία',
+        'Thailand': 'Ταϋλάνδη',
+        'Philippines': 'Φιλιππίνες',
+        'United States of America': 'Αλάσκα' // Alaska is part of USA
+    };
+
+    const greekName = nameMap[polyName];
+    if (!greekName) return null;
+    return MISSION_COUNTRIES.find(m => m.name === greekName) || null;
+}
+
+function showModal(mission) {
+    modal.classList.remove('hidden');
+    document.getElementById('country-name').textContent = mission.name;
+
+    // Show flag next to country name
+    const flagEl = document.getElementById('country-flag');
+    if (mission.flag) {
+        flagEl.innerHTML = `<img src="https://flagcdn.com/w80/${mission.flag}.png" alt="${mission.name}">`;
+    } else {
+        flagEl.innerHTML = '';
     }
 
-    showModal(name);
-    updateModal(data);
-}
+    // Build stats dynamically
+    const statsGrid = document.getElementById('stats-grid');
+    statsGrid.innerHTML = '';
 
-function showModal(name) {
-    modal.classList.remove('hidden');
-    document.getElementById('country-name').textContent = name;
-    document.getElementById('country-pop').textContent = '...';
-    document.getElementById('country-region').textContent = '...';
-    document.getElementById('country-capital').textContent = '...';
-    document.getElementById('country-flag').innerHTML = '';
-}
+    if (mission.stats && mission.stats.length > 0) {
+        mission.stats.forEach(stat => {
+            const statItem = document.createElement('div');
+            statItem.className = 'stat-item';
+            statItem.innerHTML = `
+                <span class="label">${stat.label}</span>
+                <span class="value">${stat.value}</span>
+            `;
+            statsGrid.appendChild(statItem);
+        });
+    } else {
+        statsGrid.innerHTML = '<div class="stat-item"><span class="label" style="text-align:center; width:100%; color: var(--text-muted);">—</span></div>';
+    }
 
-function updateModal(data) {
-    if (!data) {
-        document.getElementById('country-pop').textContent = 'N/A';
-        document.getElementById('country-slideshow').style.display = 'none';
+    // Build slideshow from mission images
+    const slideshowContainer = document.getElementById('country-slideshow');
+    const images = mission.images || [];
+
+    if (images.length === 0) {
+        slideshowContainer.style.display = 'none';
         return;
     }
-    document.getElementById('country-pop').textContent = new Intl.NumberFormat().format(data.population);
-    document.getElementById('country-region').textContent = data.region;
-    document.getElementById('country-capital').textContent = data.capital?.[0] || 'N/A';
-    if (data.flags?.svg) {
-        document.getElementById('country-flag').innerHTML = `<img src="${data.flags.svg}">`;
-    }
 
-    // Set up slideshow using dynamic Unsplash images related to the country
-    const slideshowContainer = document.getElementById('country-slideshow');
     slideshowContainer.style.display = 'block';
-
-    // We'll generate 3 random unsplash placeholder images related to the country or region
-    // (Note: source.unsplash.com was deprecated, so we use lorempicsum for reliable fast placeholders)
-    const countryName = data.name?.common || 'Country';
-    const images = [
-        { url: `https://picsum.photos/400/200?random=${Math.random()}`, title: `${countryName} Landscape` },
-        { url: `https://picsum.photos/400/200?random=${Math.random()}`, title: `${countryName} City View` },
-        { url: `https://picsum.photos/400/200?random=${Math.random()}`, title: `${countryName} Heritage` }
-    ];
-    let currentSlide = 0;
 
     const trackEl = document.getElementById('slideshow-track');
     const dotsContainer = document.getElementById('slide-dots');
@@ -432,7 +426,9 @@ function updateModal(data) {
         slideItem.className = 'slide-item';
 
         const img = document.createElement('img');
-        img.src = imgObj.url;
+        img.src = imgObj.src;
+        img.alt = imgObj.title;
+        img.loading = 'lazy';
 
         const title = document.createElement('div');
         title.className = 'slide-title';
@@ -489,6 +485,7 @@ function updateModal(data) {
 
 function deselectCountry() {
     activeCountry = null;
+    activeMission = null;
     updateGlobeStyles();
     modal.classList.add('hidden');
     // Zoom back out to default orbit altitude (approx 2.5 depending on initial)
