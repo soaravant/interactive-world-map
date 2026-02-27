@@ -181,10 +181,11 @@ button:hover {
 .country-header {
     display: flex !important;
     flex-direction: row !important;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    width: 100%;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    gap: 1rem !important;
+    width: 100% !important;
 }
 
 #country-name {
