@@ -253,7 +253,7 @@ function createPinElement(data) {
         <svg viewBox="0 0 24 24" class="globe-pin" style="width: 34px; height: 34px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-50%, -100%); cursor: pointer; transform-origin: center bottom;">
             <path class="pin-bg" data-country-name="${data.greetingData.name}" data-id="${data.id}" data-default-color="${data.color}" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${data.color}" stroke="white" stroke-width="1" />
             <circle cx="12" cy="9" r="5" fill="white" />
-            <path d="M11.8 5.8v6.8a.55.55 0 0 1-.9.42L8.4 11.1H6.3a1.1 1.1 0 0 1-1.1-1.1V8a1.1 1.1 0 0 1 1.1-1.1h2.1l2.5-1.93a.55.55 0 0 1 .9.44Zm2.3 1.45a.55.55 0 0 1 .78 0 3.85 3.85 0 0 1 0 5.45.55.55 0 1 1-.78-.78 2.75 2.75 0 0 0 0-3.89.55.55 0 0 1 0-.78Zm1.55-1.4a.55.55 0 0 1 .78 0 5.8 5.8 0 0 1 0 8.2.55.55 0 1 1-.78-.78 4.7 4.7 0 0 0 0-6.64.55.55 0 0 1 0-.78Z" fill="#f97316" />
+            <path d="M11.8 5.8v6.8a.55.55 0 0 1-.9.42L8.4 11.1H6.3a1.1 1.1 0 0 1-1.1-1.1V8a1.1 1.1 0 0 1 1.1-1.1h2.1l2.5-1.93a.55.55 0 0 1 .9.44Zm2.3 1.45a.55.55 0 0 1 .78 0 3.85 3.85 0 0 1 0 5.45.55.55 0 1 1-.78-.78 2.75 2.75 0 0 0 0-3.89.55.55 0 0 1 0-.78Zm1.55-1.4a.55.55 0 0 1 .78 0 5.8 5.8 0 0 1 0 8.2.55.55 0 1 1-.78-.78 4.7 4.7 0 0 0 0-6.64.55.55 0 0 1 0-.78Z" fill="#f97316" transform="translate(3.6 3.6) scale(0.7)" />
         </svg>
     `;
     element.style.pointerEvents = 'auto';
