@@ -1,7 +1,7 @@
 // Mission Countries Data - Extracted from PowerPoint "Χάρτης Εξωτερικής Ιεραποστολής"
 // Each entry: name (Greek), lat/lng for globe pin, stats from the stats image, images with captions from the slideshow
 
-const MISSION_COUNTRIES = [
+export const MISSION_COUNTRIES = [
     {
         name: "Αλάσκα",
         flag: "us",

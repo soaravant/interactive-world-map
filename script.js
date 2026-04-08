@@ -1,3 +1,6 @@
+import * as THREE from 'https://esm.sh/three@0.183.0';
+import { MISSION_COUNTRIES } from './mission_data.js';
+
 // Config
 const CONFIG = {
     colorUrl: 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
@@ -11,6 +14,9 @@ const CONFIG = {
 const app = document.getElementById('app');
 const loader = document.getElementById('loader');
 const modal = document.getElementById('info-modal');
+const Globe = globalThis.Globe;
+const d3 = globalThis.d3;
+const topojson = globalThis.topojson;
 
 // State
 let worldGlobe;
