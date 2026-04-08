@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="el">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Εικόνα Αναστάσεως</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f59e0b'/%3E%3Cpath d='M32 10c6 0 11 5 11 11 0 5-3 9-7 10v6h8v7H20v-7h8v-6c-4-1-7-5-7-10 0-6 5-11 11-11z' fill='%23fff8eb'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="./style.css?v=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="page-shell">
+        <aside class="info-panel glass-panel">
+            <p class="eyebrow">Interactive Image</p>
+            <h1 id="pin-title">Η Ανάσταση</h1>
+            <p id="pin-description" class="pin-description">Πάτησε ένα pin πάνω στην εικόνα ή ένα σημείο από τη λίστα για να μεγεθύνεις σε αυτό το τμήμα της σύνθεσης.</p>
+            <p id="pin-detail" class="pin-detail">Η προβολή ξεκινά σε πλήρη εικόνα και κάθε pin σε οδηγεί σε διαφορετικό θεολογικό ή εικαστικό σημείο.</p>
+
+            <div class="panel-actions">
+                <button id="reset-view" type="button">Πλήρης εικόνα</button>
+                <div class="page-links">
+                    <a href="../">Ιεραποστολικός Χάρτης</a>
+                    <a href="../christos-anesti/">Χριστός Ανέστη</a>
+                </div>
+            </div>
+
+            <div class="point-list" id="point-list"></div>
+        </aside>
+
+        <main class="viewer-column">
+            <div id="image-frame" class="image-frame glass-panel">
+                <div id="image-stage" class="image-stage">
+                    <img id="anastasis-image" src="../Εικόνα Αναστάσεως.png" alt="Βυζαντινή εικόνα της Αναστάσεως">
+                    <div id="pins-layer" class="pins-layer"></div>
+                </div>
+            </div>
+            <div class="viewer-caption glass-panel">
+                <p>Τα pins είναι route-local και ελέγχουν μόνο αυτή τη σελίδα. Μπορείς να αλλάξεις τίτλους, περιγραφές και zoom ανά σημείο χωρίς να επηρεάζεται ο globe.</p>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="./script.js?v=1"></script>
+</body>
+
+</html>
