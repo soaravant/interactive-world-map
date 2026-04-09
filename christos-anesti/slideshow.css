@@ -31,11 +31,34 @@
     flex-direction: column;
 }
 
+.slide-media {
+    width: 100%;
+    height: 190px;
+    background: rgba(15, 23, 42, 0.42);
+}
+
 .slideshow img {
     width: 100%;
     height: 190px;
     object-fit: cover;
     display: block;
+}
+
+.slide-item.is-fallback .slide-media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background:
+        radial-gradient(circle at top, rgba(249, 115, 22, 0.18), transparent 55%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.92) 100%);
+}
+
+.slide-fallback {
+    color: #f8fafc;
+    text-align: center;
+    line-height: 1.45;
+    font-size: 0.94rem;
 }
 
 .slide-title {

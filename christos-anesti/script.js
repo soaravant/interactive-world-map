@@ -1,5 +1,5 @@
 import * as THREE from 'https://esm.sh/three@0.183.0';
-import { GREETING_COUNTRIES } from './data.js';
+import { GREETING_COUNTRIES } from './data.js?v=2';
 
 const CONFIG = {
     colorUrl: 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
@@ -25,6 +25,22 @@ let countries = [];
 let activeAudio = null;
 let activeAudioButton = null;
 let slideshowScrollHandler = null;
+
+function isMobileViewport() {
+    return window.matchMedia('(max-width: 720px)').matches;
+}
+
+function clampLatitude(value) {
+    return Math.min(90, Math.max(-90, value));
+}
+
+function buildFocusPointOfView(lat, lng, desktopOffset = 18, mobileOffset = -10) {
+    return {
+        lat: clampLatitude(lat + (isMobileViewport() ? mobileOffset : desktopOffset)),
+        lng,
+        altitude: 1.55
+    };
+}
 
 async function init() {
     try {
@@ -176,6 +192,19 @@ async function init() {
         window.addEventListener('resize', () => {
             worldGlobe.width(window.innerWidth);
             worldGlobe.height(window.innerHeight);
+
+            if (!activeGreeting) {
+                return;
+            }
+
+            const focusLat = activeCountry?.geometry
+                ? d3.geoCentroid(activeCountry)[1]
+                : activeGreeting.lat;
+            const focusLng = activeCountry?.geometry
+                ? d3.geoCentroid(activeCountry)[0]
+                : activeGreeting.lng;
+
+            worldGlobe.pointOfView(buildFocusPointOfView(focusLat, focusLng, 24, -10), 0);
         });
 
         closeModalButton.addEventListener('click', deselectCountry);
@@ -253,7 +282,7 @@ function createPinElement(data) {
         <svg viewBox="0 0 24 24" class="globe-pin" style="width: 34px; height: 34px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-50%, -100%); cursor: pointer; transform-origin: center bottom;">
             <path class="pin-bg" data-country-name="${data.greetingData.name}" data-id="${data.id}" data-default-color="${data.color}" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${data.color}" stroke="white" stroke-width="1" />
             <circle cx="12" cy="9" r="5" fill="white" />
-            <path d="M11.8 5.8v6.8a.55.55 0 0 1-.9.42L8.4 11.1H6.3a1.1 1.1 0 0 1-1.1-1.1V8a1.1 1.1 0 0 1 1.1-1.1h2.1l2.5-1.93a.55.55 0 0 1 .9.44Zm2.3 1.45a.55.55 0 0 1 .78 0 3.85 3.85 0 0 1 0 5.45.55.55 0 1 1-.78-.78 2.75 2.75 0 0 0 0-3.89.55.55 0 0 1 0-.78Zm1.55-1.4a.55.55 0 0 1 .78 0 5.8 5.8 0 0 1 0 8.2.55.55 0 1 1-.78-.78 4.7 4.7 0 0 0 0-6.64.55.55 0 0 1 0-.78Z" fill="#f97316" transform="translate(3.6 3.6) scale(0.7)" />
+            <path d="M11.8 5.8v6.8a.55.55 0 0 1-.9.42L8.4 11.1H6.3a1.1 1.1 0 0 1-1.1-1.1V8a1.1 1.1 0 0 1 1.1-1.1h2.1l2.5-1.93a.55.55 0 0 1 .9.44Zm2.3 1.45a.55.55 0 0 1 .78 0 3.85 3.85 0 0 1 0 5.45.55.55 0 1 1-.78-.78 2.75 2.75 0 0 0 0-3.89.55.55 0 0 1 0-.78Zm1.55-1.4a.55.55 0 0 1 .78 0 5.8 5.8 0 0 1 0 8.2.55.55 0 1 1-.78-.78 4.7 4.7 0 0 0 0-6.64.55.55 0 0 1 0-.78Z" fill="#f97316" transform="translate(4.7 4.7) scale(0.56)" />
         </svg>
     `;
     element.style.pointerEvents = 'auto';
@@ -271,7 +300,7 @@ function createPinElement(data) {
             || { id: data.id, properties: { name: data.name } };
 
         updateGlobeStyles();
-        worldGlobe.pointOfView({ lat: Math.min(90, data.lat + 18), lng: data.lng, altitude: 1.55 }, 1000);
+        worldGlobe.pointOfView(buildFocusPointOfView(data.lat, data.lng), 1000);
         showModal(data.greetingData);
     };
 
@@ -315,7 +344,7 @@ function handleCountryClick(feature) {
     updateGlobeStyles();
 
     const centroid = d3.geoCentroid(feature);
-    worldGlobe.pointOfView({ lat: Math.min(90, centroid[1] + 24), lng: centroid[0], altitude: 1.55 }, 1000);
+    worldGlobe.pointOfView(buildFocusPointOfView(centroid[1], centroid[0], 24, -10), 1000);
     showModal(greeting);
 }
 
@@ -327,7 +356,9 @@ function showModal(entry) {
     modal.classList.remove('hidden');
     document.getElementById('country-name').textContent = entry.name;
     document.getElementById('greeting-text').textContent = entry.greeting;
+    document.getElementById('greeting-pronunciation').textContent = entry.greetingPronunciation || entry.greeting;
     document.getElementById('response-text').textContent = entry.response;
+    document.getElementById('response-pronunciation').textContent = entry.responsePronunciation || entry.response;
 
     const flag = document.getElementById('country-flag');
     flag.innerHTML = entry.flag
@@ -356,10 +387,25 @@ function buildSlideshow(images) {
     images.forEach((image, index) => {
         const slide = document.createElement('div');
         slide.className = 'slide-item';
-        slide.innerHTML = `
-            <img src="${image.src}" alt="${image.title}" loading="lazy">
-            <div class="slide-title">${image.title}</div>
-        `;
+        const media = document.createElement('div');
+        media.className = 'slide-media';
+
+        const img = document.createElement('img');
+        img.src = image.src;
+        img.alt = image.title;
+        img.loading = 'lazy';
+        img.addEventListener('error', () => {
+            slide.classList.add('is-fallback');
+            media.innerHTML = '<div class="slide-fallback">Η εικόνα θα προστεθεί σύντομα.</div>';
+        });
+
+        media.appendChild(img);
+        slide.appendChild(media);
+
+        const title = document.createElement('div');
+        title.className = 'slide-title';
+        title.textContent = image.title;
+        slide.appendChild(title);
         track.appendChild(slide);
 
         const dot = document.createElement('div');

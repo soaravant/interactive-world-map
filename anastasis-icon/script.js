@@ -104,7 +104,8 @@ const POINTS = [
 const titleEl = document.getElementById('pin-title');
 const descriptionEl = document.getElementById('pin-description');
 const detailEl = document.getElementById('pin-detail');
-const pointListEl = document.getElementById('point-list');
+const modalEl = document.getElementById('info-modal');
+const closeModalButton = document.getElementById('close-modal');
 const pinsLayerEl = document.getElementById('pins-layer');
 const imageFrameEl = document.getElementById('image-frame');
 const imageStageEl = document.getElementById('image-stage');
@@ -113,11 +114,20 @@ const resetViewButton = document.getElementById('reset-view');
 let activePointId = null;
 
 function init() {
-    renderPointList();
     renderPins();
     resetView(false);
 
     resetViewButton.addEventListener('click', () => resetView(true));
+    closeModalButton.addEventListener('click', event => {
+        event.stopPropagation();
+        resetView(true);
+    });
+    imageFrameEl.addEventListener('click', event => {
+        if (event.target.closest('.image-pin')) {
+            return;
+        }
+        resetView(true);
+    });
     window.addEventListener('resize', () => {
         if (!activePointId) {
             resetView(false);
@@ -131,26 +141,6 @@ function init() {
         if (event.key === 'Escape') {
             resetView(true);
         }
-    });
-}
-
-function renderPointList() {
-    pointListEl.innerHTML = '';
-
-    POINTS.forEach((point, index) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'point-jump';
-        button.dataset.pointId = point.id;
-        button.innerHTML = `
-            <span class="point-badge">${index + 1}</span>
-            <span class="point-copy">
-                <strong>${point.title}</strong>
-                <span>${point.short}</span>
-            </span>
-        `;
-        button.addEventListener('click', () => focusPoint(point, true));
-        pointListEl.appendChild(button);
     });
 }
 
@@ -176,9 +166,15 @@ function renderPins() {
 }
 
 function focusPoint(point, smooth = true) {
+    if (activePointId === point.id) {
+        resetView(smooth);
+        return;
+    }
+
     activePointId = point.id;
     syncActiveState();
     updateInfo(point);
+    modalEl.classList.remove('hidden');
 
     const frameWidth = imageStageEl.clientWidth;
     const frameHeight = imageStageEl.clientHeight;
@@ -199,9 +195,10 @@ function focusPoint(point, smooth = true) {
 function resetView(smooth = true) {
     activePointId = null;
     syncActiveState();
+    modalEl.classList.add('hidden');
     titleEl.textContent = 'Η Ανάσταση';
-    descriptionEl.textContent = 'Πάτησε ένα pin πάνω στην εικόνα ή ένα σημείο από τη λίστα για να μεγεθύνεις σε αυτό το τμήμα της σύνθεσης.';
-    detailEl.textContent = 'Η προβολή ξεκινά σε πλήρη εικόνα και κάθε pin σε οδηγεί σε διαφορετικό θεολογικό ή εικαστικό σημείο.';
+    descriptionEl.textContent = 'Πάτησε ένα pin πάνω στην εικόνα για να μεγεθύνεις σε αυτό το τμήμα της σύνθεσης.';
+    detailEl.textContent = 'Οι πληροφορίες εμφανίζονται μόνο όταν επιλέξεις σημείο, όπως και στα άλλα interactive maps.';
     imageStageEl.style.transitionDuration = smooth ? '650ms' : '0ms';
     imageStageEl.style.transform = 'translate(0px, 0px) scale(1)';
 }
@@ -213,12 +210,6 @@ function updateInfo(point) {
 }
 
 function syncActiveState() {
-    document.querySelectorAll('.point-jump').forEach(button => {
-        const isActive = button.dataset.pointId === activePointId;
-        button.classList.toggle('is-active', isActive);
-        button.setAttribute('aria-pressed', String(isActive));
-    });
-
     document.querySelectorAll('.image-pin').forEach(pin => {
         const isActive = pin.dataset.pointId === activePointId;
         pin.classList.toggle('is-active', isActive);
