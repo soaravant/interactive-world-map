@@ -1,0 +1,17 @@
+{
+    "name": "Interactive Εικόνα Αναστάσεως",
+    "short_name": "Ανάσταση",
+    "start_url": "./index.html",
+    "display": "fullscreen",
+    "orientation": "landscape",
+    "background_color": "#100909",
+    "theme_color": "#100909",
+    "icons": [
+        {
+            "src": "../anastasis-image.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ]
+}

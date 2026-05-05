@@ -7,6 +7,8 @@
     --accent: #f59e0b;
     --accent-soft: rgba(245, 158, 11, 0.2);
     --shadow: 0 24px 60px rgba(0, 0, 0, 0.36);
+    --phone-pin-y-offset: 0px;
+    --pin-size: 34px;
 }
 
 * {
@@ -20,10 +22,16 @@ body {
     height: 100vh;
     overflow: hidden;
     background:
-        radial-gradient(circle at top, rgba(176, 83, 18, 0.28), transparent 36%),
-        linear-gradient(180deg, #1c0f0a 0%, #0f0907 100%);
+        radial-gradient(circle at 22% 14%, rgba(255, 213, 112, 0.42), transparent 32%),
+        radial-gradient(circle at 82% 22%, rgba(184, 111, 28, 0.48), transparent 34%),
+        linear-gradient(135deg, #f2c45f 0%, #b77927 36%, #5f3212 70%, #231008 100%);
     color: var(--text);
     font-family: 'Outfit', sans-serif;
+}
+
+html,
+body {
+    width: 100%;
 }
 
 button {
@@ -34,7 +42,7 @@ button {
     position: relative;
     width: 100%;
     height: 100%;
-    padding: 1rem;
+    padding: 0;
     overflow: hidden;
 }
 
@@ -108,65 +116,81 @@ button {
     color: var(--muted);
 }
 
-.panel-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-}
-
-#reset-view {
-    width: 100%;
-    border: none;
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--accent) 0%, #b45309 100%);
-    color: #1d1407;
-    font-weight: 700;
-    padding: 0.9rem 1rem;
-    cursor: pointer;
-}
-
 .image-frame {
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    padding: 0.85rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 .image-stage {
     position: relative;
-    width: 100%;
-    height: 100%;
-    border-radius: 18px;
+    aspect-ratio: 83 / 50;
+    width: min(100%, calc(100vh * 83 / 50));
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
     overflow: hidden;
-    transform-origin: top left;
-    transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform;
+    touch-action: none;
+    cursor: grab;
+    background: transparent;
+}
+
+.image-stage.is-dragging {
+    cursor: grabbing;
 }
 
 #anastasis-image {
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: fill;
+    background: transparent;
     user-select: none;
     -webkit-user-drag: none;
+    transform-origin: top left;
+    transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
 }
 
 .pins-layer {
     position: absolute;
     inset: 0;
+    pointer-events: none;
+    z-index: 30;
 }
 
 .image-pin {
     position: absolute;
-    width: 34px;
-    height: 34px;
+    width: var(--pin-size);
+    min-width: var(--pin-size);
+    max-width: var(--pin-size);
+    height: var(--pin-size);
+    min-height: var(--pin-size);
+    max-height: var(--pin-size);
     transform: translate(-50%, -100%);
     border: none;
     border-radius: 50%;
     background: none;
     cursor: pointer;
+    pointer-events: auto;
+    transition:
+        left 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+        top 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.2s ease;
+    flex: 0 0 var(--pin-size);
+    contain: layout paint;
 }
 
 .image-pin::before,
@@ -214,8 +238,20 @@ button {
 }
 
 @media (max-width: 720px) {
+    :root {
+        --phone-pin-y-offset: -100px;
+        --pin-size: 30px;
+    }
+
+    body {
+        background:
+            radial-gradient(circle at 22% 14%, rgba(255, 213, 112, 0.42), transparent 32%),
+            radial-gradient(circle at 82% 22%, rgba(184, 111, 28, 0.48), transparent 34%),
+            linear-gradient(135deg, #f2c45f 0%, #b77927 36%, #5f3212 70%, #231008 100%);
+    }
+
     .page-shell {
-        padding: 0.7rem;
+        padding: 0;
     }
 
     .info-modal {
@@ -224,11 +260,76 @@ button {
     }
 
     .image-frame {
-        padding: 0.55rem;
+        padding: 0;
+        background: none;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
     }
 
-    .image-pin {
-        width: 30px;
-        height: 30px;
+    .image-stage {
+        border-radius: 0;
+    }
+
+}
+
+@media (orientation: landscape) and (max-height: 720px) and (pointer: coarse) {
+    :root {
+        --phone-pin-y-offset: -100px;
+    }
+
+    body {
+        background:
+            radial-gradient(circle at 22% 14%, rgba(255, 213, 112, 0.42), transparent 32%),
+            radial-gradient(circle at 82% 22%, rgba(184, 111, 28, 0.48), transparent 34%),
+            linear-gradient(135deg, #f2c45f 0%, #b77927 36%, #5f3212 70%, #231008 100%);
+    }
+
+    .page-shell,
+    .image-frame {
+        padding: 0;
+    }
+
+    .image-frame {
+        background: none;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .image-stage {
+        border-radius: 0;
+    }
+}
+
+@media (orientation: portrait) and (max-width: 720px) {
+    body {
+        width: 100svw;
+        height: 100svh;
+        min-height: 100svh;
+    }
+
+    .page-shell {
+        width: 100svh;
+        height: 100svw;
+        transform: rotate(90deg) translateY(-100%);
+        transform-origin: top left;
+        padding: 0;
+    }
+
+    .info-modal {
+        top: 0.55rem;
+        width: min(380px, calc(100% - 1rem));
+        max-height: calc(100% - 1.1rem);
+        overflow: auto;
+    }
+
+    #anastasis-image {
+        object-fit: contain;
+        background: transparent;
     }
 }
